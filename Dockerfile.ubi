@@ -1,0 +1,52 @@
+# Stage 1: Build frontend
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS frontend-builder
+
+WORKDIR /opt/app-root/src/frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2: Python application
+FROM registry.access.redhat.com/ubi9/python-312
+
+WORKDIR /opt/app-root/src
+
+# Copy dependency file first for layer caching
+COPY pyproject.toml MANIFEST.in ./
+
+# Install the application and its dependencies
+RUN pip install --no-cache-dir .
+
+# Copy application source
+COPY src/ src/
+COPY frontend/__init__.py frontend/__init__.py
+
+# Copy built frontend assets from Stage 1
+COPY --from=frontend-builder /opt/app-root/src/frontend/dist/ frontend/dist/
+
+# Create a minimal demo Logseq graph directory for startup
+RUN mkdir -p /opt/app-root/demo-graph/pages /opt/app-root/demo-graph/journals /opt/app-root/demo-graph/assets && \
+    echo '{}' > /opt/app-root/demo-graph/logseq/config.edn 2>/dev/null; \
+    mkdir -p /opt/app-root/demo-graph/logseq && \
+    echo '{}' > /opt/app-root/demo-graph/logseq/config.edn && \
+    echo "- Welcome to Matryca Plumber PoC" > /opt/app-root/demo-graph/pages/README.md
+
+# OpenShift compatibility: group 0 permissions
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+
+# Environment variables
+ENV LOGSEQ_GRAPH_PATH=/opt/app-root/demo-graph \
+    MATRYCA_LM_BASE_URL=http://localhost:11434/v1 \
+    MATRYCA_LM_MODEL=demo-model \
+    MATRYCA_UI_ALLOW_LAN=1 \
+    MATRYCA_UI_TOKEN=poc-test-token-autopoc \
+    PYTHONDONTWRITEBYTECODE=1
+
+EXPOSE 8500
+
+USER 1001
+
+CMD ["uvicorn", "src.cli.ui_server:app", "--host", "0.0.0.0", "--port", "8500"]
