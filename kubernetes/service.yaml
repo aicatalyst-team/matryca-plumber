@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: matryca-plumber
+  labels:
+    app: matryca-plumber
+    app.kubernetes.io/name: matryca-plumber
+    app.kubernetes.io/part-of: matryca-plumber
+    app.kubernetes.io/managed-by: autopoc
+spec:
+  type: ClusterIP
+  selector:
+    app: matryca-plumber
+  ports:
+    - port: 8500
+      targetPort: 8500
+      protocol: TCP
+      name: http

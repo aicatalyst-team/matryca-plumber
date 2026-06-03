@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matryca-plumber
+  labels:
+    app: matryca-plumber
+    app.kubernetes.io/name: matryca-plumber
+    app.kubernetes.io/part-of: matryca-plumber
+    app.kubernetes.io/managed-by: autopoc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matryca-plumber
+  template:
+    metadata:
+      labels:
+        app: matryca-plumber
+        app.kubernetes.io/name: matryca-plumber
+    spec:
+      containers:
+        - name: matryca-plumber
+          image: image-registry.openshift-image-registry.svc:5000/autopoc-test-builds/matryca-plumber:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8500
+              protocol: TCP
+              name: http
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            tcpSocket:
+              port: 8500
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
