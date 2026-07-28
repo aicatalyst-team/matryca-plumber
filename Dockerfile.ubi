@@ -1,0 +1,51 @@
+# Stage 1: Build frontend assets
+FROM registry.access.redhat.com/ubi9/nodejs-22 AS frontend-builder
+
+# Use the default WORKDIR (/opt/app-root/src) which has correct permissions
+WORKDIR /opt/app-root/src
+
+# Copy frontend package files and install dependencies
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --ignore-scripts
+
+# Copy frontend source and build
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Python runtime with built frontend
+FROM registry.access.redhat.com/ubi9/python-312
+
+WORKDIR /opt/app-root/src
+
+# Copy Python project files first (for layer caching)
+COPY pyproject.toml MANIFEST.in ./
+
+# Copy source code (src/ is the Python package)
+COPY src/ ./src/
+
+# Copy frontend directory structure (the app resolves frontend/dist via Path(__file__).parents[2])
+COPY --from=frontend-builder /opt/app-root/src/dist/ ./frontend/dist/
+# Copy frontend __init__.py so setuptools can find it as a package
+COPY frontend/__init__.py ./frontend/__init__.py
+
+# Install the project and its dependencies
+RUN pip install --no-cache-dir . && \
+    pip install --no-cache-dir uvicorn
+
+# Create a dummy data directory for LOGSEQ_GRAPH_PATH
+RUN mkdir -p /opt/app-root/data
+
+# Set permissions for OpenShift arbitrary UID
+USER 0
+RUN chgrp -R 0 /opt/app-root && chmod -R g=u /opt/app-root
+USER 1001
+
+# Environment variables for container deployment
+ENV MATRYCA_UI_ALLOW_LAN=1 \
+    MATRYCA_UI_TOKEN=poc-demo-token-2026 \
+    LOGSEQ_GRAPH_PATH=/opt/app-root/data \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8080
+
+CMD ["uvicorn", "src.cli.ui_server:app", "--host", "0.0.0.0", "--port", "8080", "--log-level", "info"]

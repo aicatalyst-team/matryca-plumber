@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: matryca-plumber
+  namespace: poc-matryca-plumber
+  labels:
+    app: matryca-plumber
+    managed-by: autopoc
+spec:
+  selector:
+    app: matryca-plumber
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  type: ClusterIP
