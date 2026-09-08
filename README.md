@@ -1,4 +1,10 @@
-# Matryca Plumber
+> [!WARNING]
+> **This repository is archived.**
+>
+> Archived on 2026-09-08 by the AI Catalyst Platform Team.
+> It is read-only and no longer maintained.
+
+---# Matryca Plumber
 
 ![Views](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/MarcoPorcellato/matryca-plumber/main/metrics/views-badge.json)
 ![Clones](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/MarcoPorcellato/matryca-plumber/main/metrics/clones-badge.json)
